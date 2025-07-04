@@ -1,0 +1,542 @@
+##TO DO FEATURE PLAN
+
+# Calulcate Advanced Metrics -- create a similar one for regular statistics
+# make it so that it can append on to existing file
+# give rest of players 0 if not clicked
+# make into excel file that looks similar to one existing
+# Auto Save
+# Live Feed
+# Aggregate Stats Generator
+# import csv and work from there in the case of a crash
+# https://stackoverflow.com/questions/10020885/creating-a-popup-message-box-with-an-entry-field
+
+import pygame
+import pygame.locals 
+from button import button, text
+from datetime import date
+import csv
+import tkinter as tk
+from tkinter import simpledialog
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Fill, Border, Side
+from pathlib import Path 
+from openpyxl.utils import get_column_letter
+
+ROOT = tk.Tk()
+
+ROOT.withdraw()
+# the input dialog
+today = date.today()
+USER_INP = simpledialog.askstring(title="User Input", prompt="Name of File (don't include extension)")
+if USER_INP is None:
+    file_name = f"./{today.month}-{today.day}statsheet.xlsx"
+else:
+    file_name = USER_INP + ".xlsx"
+    
+count = 0
+while Path(f"./{file_name}").is_file():
+    count+=1
+    file_name = f"./{file_name[:len(USER_INP)]}_{count}.xlsx"
+
+# check it out
+print("Expected File name", file_name)
+
+
+#initializing pygame
+pygame.init()
+
+#setting screen width and height
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 800
+ROSTER_SIZE = 14
+
+#creating game window
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Stat Tracker")
+
+#creating text for title
+
+screen.fill((0,0,0))
+pygame.font.init()
+textfont = pygame.font.SysFont("monospace", 50)
+
+textTBR = textfont.render("STAT TRACKER", 1, (255,255,255))
+screen.blit(textTBR, (220, 10))
+
+# create a surface object, image is drawn on it.
+imp = pygame.image.load("csuLogo.webp").convert()
+imp = pygame.transform.scale(imp,(250,250))
+ 
+# Using blit to copy content from one surface to other
+screen.blit(imp, (275, 50))
+ 
+# paint screen one time
+pygame.display.flip()
+
+run = True
+selected = False
+global curr
+multipliers = [3,2,1,1,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
+# def send_to_file(stats):    
+#     # need to add in advanced metrics
+#     today = date.today()
+#     if USER_INP is None:
+#         file_name = "./" + str(today.month) + "-" + str(today.day) + "statsheet.csv"
+#     else:
+#         file_name = USER_INP + ".csv"
+
+#     header = ["PLAYER","GOLD\n+3", "SILVER\n+2", "BRONZE\n+1", "FTS\n+1", "AST\n+2", "TO\n-3", "PT\n+1", "OREB\n+2", "DREB\n+1", "REB", "STL\n+2", "BLK\n+2", "DEFL\n+1", "CHG/W-UP\n+3", "DRAW FL\n+1", "FOUL\n-1", "BLOW BY\n-1", "TEAM WIN\n+1", "TOTAL"]
+#     f = open(file_name, 'w')
+#     writer = csv.writer(f)
+#     writer.writerow(header)
+#     for person in stats.keys():
+#         total = 0
+#         csv_string = [person]
+#         for i in stats[person]:
+#             csv_string.append(str(i))
+#         for a,b in zip(stats[person], multipliers):
+#             total += int(a) * b
+#         csv_string.append(str(total))
+#         writer.writerow(csv_string)
+   
+
+def send_to_file(stats):
+    header = ["PLAYER","GOLD\n +3", "SILVER\n +2", "BRONZE\n +1", "FTS\n +1", "AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n+ 2", "BLK\n +2", "DEFL\n +1", "CHG/W-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "TEAM WIN\n +1", "TOTAL"]
+    multipliers = [3,2,1,1,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Stat Sheet"
+    
+    # Generate Top
+    ws.merge_cells("A1:T1")
+    ws['A1'] = "Cleveland State Basketball"
+    ws['A1'].font = Font(name="Arial Narrow", size=20, bold=True, color=("FFFFFF"))
+    ws['A1'].fill = PatternFill(start_color="1B6A42", end_color="1B6A42",fill_type="solid")
+    ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+    
+    ws.merge_cells("A2:T2")
+    ws['A2'] = f"Viking Way Stats - {today.month}/{today.day}"
+    ws['A2'].font = Font(name="Arial Narrow", size=14, bold=True, italic=True, color="000000")
+    ws['A2'].fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9",fill_type="solid")
+    ws['A2'].alignment = Alignment(horizontal="center", vertical="center")
+    
+    ws.append(header)
+    header_font = Font(name="Arial Narrow", bold=True, italic=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
+    for col in range(1, len(header) + 1):
+        cell = ws.cell(row=3, column=col)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    
+    player_rows = []
+    for person in stats.keys():
+        values = stats[person] 
+        total = 0
+        for a,b in zip(stats[person], multipliers):
+            total += int(a) * b
+        row_data = [person] + values + [total]
+        player_rows.append(row_data)
+        
+    for player in players:
+        name = player["name"]
+        if name not in stats:
+            zero_stats = [0] * 18
+            total = 0  
+            row_data = [name] + zero_stats + [total]
+            player_rows.append(row_data)
+        
+    player_rows.sort(key=lambda row:row[0])
+    for row in player_rows:
+        ws.append(row)    
+        
+    for r in range(4, 4+ROSTER_SIZE):
+        ws[f"A{r}"].font = Font(name="Arial Narrow", size=10, bold=True)
+        ws[f"T{r}"].font = Font(name="Arial Narrow", size=10, bold=True)
+        ws[f"T{r}"].alignment = Alignment(horizontal="center", vertical="center") 
+        ws[f"S{r}"].border = Border(right=Side(style="thick", color="000000"))
+    
+    for r in range(4, 4+ROSTER_SIZE):
+        for c in range(2, len(header)):
+            cell = ws.cell(row=r, column=c)
+            cell.font = Font(name="Arial Narrow", size=10)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+    
+    for r in range(5, 4+ROSTER_SIZE, 2):
+        for c in range(1, len(header)+1):
+            cell = ws.cell(row=r, column=c)
+            cell.fill = PatternFill(start_color="efefef", end_color="efefef", fill_type="solid")
+    
+    for r in range(4, 4+ROSTER_SIZE):
+        for c in range(1, len(header)):       
+            cell = ws.cell(row=r, column=c) 
+            cell.border = Border(right=Side(style="thin", color="000000")) 
+            
+    ws.merge_cells(f"A{ROSTER_SIZE+4}:T{ROSTER_SIZE+4}")
+    ws['A18'].fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
+            
+            
+    for col in ws.columns:
+        max_length = 0
+        column = get_column_letter(col[0].column)  # Convert 1 -> 'A', etc.
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        adjusted_width = max_length + 2  # add some padding
+        ws.column_dimensions[column].width = adjusted_width
+
+    wb.save(file_name)
+    
+    
+# "WIN" ,"FGM", "FGA", "3PM", "3PA", "AST", "ORB", "DRB","STL","BLK","TOV"]
+# "GOLD", "SILVER", "BRONZE", "FTS", "AST", "TO", "PT", "OREB", "DREB", "REB", "STL", "BLK", "DEFL", "CHG/W-UP", "DRAW FL", "FOUL", "BLOW BY" "TEAM WIN", 
+def GOLD():
+    global curr
+    curr = "GOLD"
+def SILVER():
+    global curr
+    curr = "SILVER"
+def BRONZE():
+    global curr
+    curr = "BRONZE"
+def FTs():
+    global curr
+    curr = "FTs"
+def AST():
+    global curr
+    curr = "AST"
+def TOV():
+    global curr
+    curr = "TOV"
+def PT():
+    global curr
+    curr = "PT"
+def OREB():
+    global curr
+    curr = "OREB"
+def DREB():
+    global curr
+    curr = "DREB"
+def STL():
+    global curr
+    curr = "STL"
+def BLK():
+    global curr
+    curr = "BLK"
+def DEFL():
+    global curr
+    curr = "DEFL"
+def CHG_WUP():
+    global curr
+    curr = "CHG/W-UP"
+def DRAW_FL():
+    global curr
+    curr = "DRAW FOUL"
+def FOUL():
+    global curr
+    curr = "FOUL"
+def BLOW_BY():
+    global curr
+    curr = "BLOW BY"
+def WIN():
+    global curr
+    curr = "TEAM WIN"
+
+
+def find(lst, num):
+    for dictionary in lst:
+        if dictionary["number"] == num:
+            return dictionary
+    return {}
+
+def find_option(lst, name):
+    for dictionary in lst:
+        if dictionary["name"] == name:
+            return dictionary
+    return {}
+
+stats = {}
+global stat_records
+stat_records = []
+def Number(num):
+    global stat_records
+    new_stats = {}
+    for i in stats.keys():
+        new_stats[i] = stats[i].copy()
+    stat_records.append(new_stats)
+    print(stat_records)
+    player_dict = find(players, num)
+    name = player_dict["name"]
+    stats_dict = find_option(options, curr)
+    if name in stats:
+        print(stats_dict["index"])
+        stats[name][stats_dict["index"]] += 1
+        if stats_dict["index"] == 7 or stats_dict["index"] == 8:
+            stats[name][9] += 1
+    else:
+        stats[name] = [0]*18
+        stats[name][stats_dict["index"]] = 1
+        if stats_dict["index"] == 7 or stats_dict["index"] == 8:
+            stats[name][9] += 1
+    print(stats)
+    save()
+
+players = [
+    {"number": "0",
+     "function": Number,
+     "name": "Foster Wonders",
+     "img": "./players/0foster.webp"},
+    {"number": "1",
+     "function": Number,
+     "name": "Ice Emery Jr.",
+     "img": "./players/1ice.webp"},
+    {"number": "2",
+     "function": Number,
+     "name": "Jaidon Lipscomb",
+     "img": "./players/2jaidon.webp"},
+    {"number": "3",
+     "function": Number,
+     "name": "Tre Beard",
+     "img": "./players/3tre.webp"},
+    {"number": "4",
+     "function": Number,
+     "name": "Priest Ryan",
+     "img": "./players/4preist.webp"},
+    {"number": "5",
+     "function": Number,
+     "name": "David Giddens",
+     "img": "./players/5david.webp"},
+    {"number": "7",
+     "function": Number,
+     "name": "Dayan Nessah"},
+    {"number": "11",
+     "function": Number,
+     "name": "Waqo Tessema",
+     "img": "./players/11waqo.webp"},
+    {"number": "12",
+     "function": Number,
+     "name": "Holden Pierre-Louis",
+     "img": "./players/12holden.webp"},
+    {"number": "13",
+     "function": Number,
+     "name": "Lucas Burton",
+     "img": "./players/13lucas.webp"},
+    {"number": "22",
+     "function": Number,
+     "name": "Josiah Harris",
+     "img": "./players/22jojo.webp"},
+    {"number": "23",
+     "function": Number,
+     "name": "Manny Hill",
+     "img": "./players/23manny.webp"},
+    {"number": "24",
+     "function": Number,
+     "name": "Kamari Jones",
+     "img": "./players/24kamari.webp"},
+    {"number": "50",
+     "function": Number,
+     "name": "Kevo St. Hilaire",
+     "img": "./players/50kevo.webp"},
+]
+# "GOLD", "SILVER", "BRONZE", "FTS", "AST", "TO", "PT", "OREB", "DREB", "REB", "STL", "BLK", "DEFL", "CHG/W-UP", "DRAW FL", "FOUL", "BLOW BY" "TEAM WIN", 
+
+options = [
+    { "name" : "GOLD",
+      "function": GOLD,
+      "index": 0
+    },
+    { "name" : "SILVER",
+      "function": SILVER,
+      "index": 1
+    },
+    { "name" : "BRONZE",
+      "function": BRONZE,
+      "index": 2
+    },
+    { "name" : "FTs",
+      "function": FTs,
+      "index": 3
+    },
+    { "name" : "AST",
+      "function": AST,
+      "index": 4
+    },
+    { "name" : "TOV",
+      "function": TOV,
+      "index": 5
+    },
+    { "name" : "PT",
+      "function": PT,
+      "index": 6
+    },
+    { "name" : "OREB",
+      "function": OREB,
+      "index": 7
+    },
+    { "name" : "DREB",
+      "function": DREB,
+      "index": 8
+    },
+    #total rebounds is index 9
+    { "name" : "STL",
+      "function": STL,
+      "index": 10
+    },
+    { "name" : "BLK",
+      "function": BLK,
+      "index": 11
+    },
+    { "name" : "DEFL",
+      "function": DEFL,
+      "index": 12
+    },
+    { "name" : "CHG/W-UP",
+      "function": CHG_WUP,
+      "index": 13
+    },
+    { "name" : "DRAW FOUL",
+      "function": DRAW_FL,
+      "index": 14
+    },
+    { "name" : "FOUL",
+      "function": FOUL,
+      "index": 15
+    },
+    { "name" : "BLOW BY",
+      "function": BLOW_BY,
+      "index": 16
+    },
+    { "name" : "TEAM WIN",
+      "function": WIN,
+      "index": 17
+    }
+    ]
+
+button_list = []
+x = 80
+x_increment = 125
+y = 425
+row = 0
+y_increment = 75
+count = 0
+for option in options:
+    pos_x = x + (count * x_increment)
+    pos_y = y + (row * y_increment)
+    
+    curr_button = button(position = (pos_x, pos_y), size=(100, 50), clr=(220, 220, 220), cngclr=(255, 0, 0), func=option["function"], text=option["name"])
+    count+=1
+    
+    if pos_x > 700:
+        count = 0
+        row += 1
+        
+    button_list.append(curr_button)
+
+player_list = []
+player_images = []
+x2 = 80
+x_increment2 = 125
+y2 = 425
+row = 0
+y_increment2 = 160
+count = 0
+
+for option in players:
+    if "img" in players:
+        img = pygame.image.load(option["img"]).convert_alpha()
+        img = pygame.transform.scale(img, (100,125))
+        option["img"] = img
+
+for option in players:
+    pos_x = x2 + (count * x_increment2)
+    pos_y = y2 + (row * y_increment2)
+    
+    curr_button = button(position = (pos_x, pos_y), size=(100, 50), clr=(220, 220, 220), cngclr=(255, 0, 0), func=option["function"], text=option["number"])
+    count+=1
+    
+    if pos_x > 700:
+        count = 0
+        row += 1
+    player_list.append(curr_button)
+    
+    if "img" in option:
+        img = pygame.image.load(option["img"]).convert_alpha()
+        img = pygame.transform.scale(img, (70,87))
+        img_rect = img.get_rect(center=(pos_x, pos_y - 73))
+        # player_images.append((img, img_rect))
+        player_images.append({"img": img, "rect": img_rect, "player_number": option["number"], "func": option["function"]})
+
+def save():
+    if stats == {}:
+        print("No Stats To Save")
+    else:
+        send_to_file(stats)
+        print("Saved")
+
+def new_game():
+    stats = {}
+    players = []
+
+while run:
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+        elif event.type == pygame.KEYDOWN:
+            if pygame.key.get_mods() & pygame.KMOD_META:
+                if event.key == pygame.K_s:
+                    save()
+                if event.key == pygame.K_z:
+                    print("Undo")
+                    if len(stat_records) > 0:
+                        stats = stat_records[len(stat_records)-1].copy()
+                        stat_records = stat_records[0:-1]
+                        print(stats)
+                if event.key == pygame.K_1:
+                    quit
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    pos = pygame.mouse.get_pos()
+                    pygame.draw.rect(screen, (0,0,0), pygame.Rect(0, 300, 800, 500))
+                    if not selected and not press:
+                        for b in button_list:
+                            if b.rect.collidepoint(pos):
+                                selected = True
+                                press = True
+                                pygame.draw.rect(screen, (0,0,0), pygame.Rect(0, 400, 800, 200))
+                                pygame.display.flip()
+                                b.call_back()
+                    if selected and not press:
+                        for b in player_list:
+                            if b.rect.collidepoint(pos):
+                                selected = False
+                                press = True
+                                pygame.draw.rect(screen, (0,0,0), pygame.Rect(0, 400, 800, 200))
+                                pygame.display.flip()
+                                b.call_back(b.txt)
+                        for p in player_images:
+                            if p["rect"].collidepoint(pos):
+                                selected = False
+                                press = True
+                                pygame.draw.rect(screen, (0,0,0), pygame.Rect(0, 400, 800, 200))
+                                pygame.display.flip()
+                                p["func"](p["player_number"])
+        else:
+            press = False
+                
+    if not selected:
+        for b in button_list:
+            b.draw(screen)
+    if selected:
+        for b in player_list:
+            b.draw(screen)
+        for p in player_images:
+            screen.blit(p["img"], p["rect"])
+
+    pygame.display.update()
+
+pygame.quit()
