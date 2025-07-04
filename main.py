@@ -16,30 +16,65 @@ from button import button, text
 from datetime import date
 import csv
 import tkinter as tk
-from tkinter import simpledialog
-from openpyxl import Workbook
+from tkinter import simpledialog, messagebox
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Fill, Border, Side
 from pathlib import Path 
 from openpyxl.utils import get_column_letter
+from openpyxl.cell.cell import MergedCell
 
 ROOT = tk.Tk()
-
 ROOT.withdraw()
-# the input dialog
+CONTINUE_WB = False
+
+# Gets wanted filename
 today = date.today()
 USER_INP = simpledialog.askstring(title="User Input", prompt="Name of File (don't include extension)")
-if USER_INP is None:
-    file_name = f"./{today.month}-{today.day}statsheet.xlsx"
+if not USER_INP or USER_INP.strip() == "":
+    base_name = f"./{today.month}-{today.day}statsheet"
 else:
-    file_name = USER_INP + ".xlsx"
+    base_name = USER_INP.strip()
     
-count = 0
-while Path(f"./{file_name}").is_file():
-    count+=1
-    file_name = f"./{file_name[:len(USER_INP)]}_{count}.xlsx"
+file_name = base_name + ".xlsx"
+
+# Checks if filename exists
+# OPTIONS:
+## Continue Working
+## Add new worksheet
+## Overwrite existing
+if Path(file_name).is_file():
+    ADDSHEET_INP = messagebox.askyesno(title="Pick Either", message="This file already exists. Do you want to add a new sheet to the workbook")
+
+    if not ADDSHEET_INP:
+        APPEND_INP = messagebox.askyesno(title="Continue Working", message="Do you want to continue working on an existing workbook?")
+        
+        if not APPEND_INP:
+            OVERWRITE_INP = messagebox.askyesno(title="Pick one", message="Are you sure? Selecting YES will overwrite existing files! Selecting NO will create a copy")
+            if not OVERWRITE_INP:
+                count = 0
+                if not OVERWRITE_INP:   
+                    while Path(file_name).is_file():
+                        count+=1
+                        file_name = f"./{base_name}_{count}.xlsx"
+    else:
+        CONTINUE_WB = True
+        wb = load_workbook(filename=file_name)
+        SHEETNAME_INP = simpledialog.askstring(title="New Sheet Input", prompt="Enter name of name of the new sheet (can't use '/' character)")
+        
+        if not SHEETNAME_INP or SHEETNAME_INP.strip() == "":
+            sheet_name = f"./{today.month}-{today.day}statsheet"
+        else:
+            sheet_name = SHEETNAME_INP.strip()
+        
+        # same thing with checking to append or overwrite sheet
+        
+        count = 1
+        while sheet_name in wb.sheetnames:
+            sheet_name = f"{sheet_name} {count}"
+            count+=1  
 
 # check it out
-print("Expected File name", file_name)
+print("Saving name", file_name)
 
 
 #initializing pygame
@@ -55,7 +90,6 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Stat Tracker")
 
 #creating text for title
-
 screen.fill((0,0,0))
 pygame.font.init()
 textfont = pygame.font.SysFont("monospace", 50)
@@ -99,37 +133,56 @@ multipliers = [3,2,1,1,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
 #         csv_string.append(str(total))
 #         writer.writerow(csv_string)
    
-
-def send_to_file(stats):
+# Sends stats to file and formats worksheet
+def send_to_file(stats, wb=None, sheet_name=""):
     header = ["PLAYER","GOLD\n +3", "SILVER\n +2", "BRONZE\n +1", "FTS\n +1", "AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n+ 2", "BLK\n +2", "DEFL\n +1", "CHG/W-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "TEAM WIN\n +1", "TOTAL"]
     multipliers = [3,2,1,1,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
     
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Stat Sheet"
+    # Create workbook if none exists (doesn't want to append)
+    if wb is None:
+        wb = Workbook()
+        ws = wb.active
+        if ws.title == "Sheet":
+            wb.remove(ws)
     
-    # Generate Top
+    # Clear cells in worksheet or creates new one
+    if sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        for row in ws.iter_rows():
+            for cell in row:
+                if not isinstance(cell, MergedCell):
+                    cell.value = None
+    else:
+        ws = wb.create_sheet(title=sheet_name)
+    
+    # Generate Top Header
     ws.merge_cells("A1:T1")
     ws['A1'] = "Cleveland State Basketball"
-    ws['A1'].font = Font(name="Arial Narrow", size=20, bold=True, color=("FFFFFF"))
+    ws['A1'].font = Font(name="Arial Narrow", size=22, bold=True, color=("FFFFFF"))
     ws['A1'].fill = PatternFill(start_color="1B6A42", end_color="1B6A42",fill_type="solid")
     ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
     
+    # Generate secondary header
     ws.merge_cells("A2:T2")
     ws['A2'] = f"Viking Way Stats - {today.month}/{today.day}"
-    ws['A2'].font = Font(name="Arial Narrow", size=14, bold=True, italic=True, color="000000")
+    ws['A2'].font = Font(name="Arial Narrow", size=16, bold=True, italic=True, color="000000")
     ws['A2'].fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9",fill_type="solid")
     ws['A2'].alignment = Alignment(horizontal="center", vertical="center")
     
-    ws.append(header)
+    # Create header with wanted statistics
     header_font = Font(name="Arial Narrow", bold=True, italic=True, color="FFFFFF")
     header_fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
-    for col in range(1, len(header) + 1):
-        cell = ws.cell(row=3, column=col)
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    
+    ## Re"draws" statistic headers every update
+    start_header_row = 3
+    for col_index, value in enumerate(header, start=1):
+        cell = ws.cell(row=start_header_row, column=col_index, value=value)
         cell.font = header_font
         cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-    
+        cell.alignment = header_alignment
+        
+    # Generates rows of player statistic data
     player_rows = []
     for person in stats.keys():
         values = stats[person] 
@@ -139,6 +192,7 @@ def send_to_file(stats):
         row_data = [person] + values + [total]
         player_rows.append(row_data)
         
+    # Generates row for player if they are not already on the board
     for player in players:
         name = player["name"]
         if name not in stats:
@@ -146,16 +200,22 @@ def send_to_file(stats):
             total = 0  
             row_data = [name] + zero_stats + [total]
             player_rows.append(row_data)
-        
+    
+    # Sorts the players by first name and paste it to worksheet
     player_rows.sort(key=lambda row:row[0])
-    for row in player_rows:
-        ws.append(row)    
-        
+    start_row = 4
+    for r_index, row in enumerate(player_rows, start=start_row):
+        for c_index, value in enumerate(row, start=1):
+            ws.cell(row=r_index, column=c_index, value=value)   
+    
+    # Styling for Rows and text
     for r in range(4, 4+ROSTER_SIZE):
-        ws[f"A{r}"].font = Font(name="Arial Narrow", size=10, bold=True)
-        ws[f"T{r}"].font = Font(name="Arial Narrow", size=10, bold=True)
+        ws[f"A{r}"].font = Font(name="Arial Narrow", size=12, bold=True)
+        ws[f"A{r}"].alignment = Alignment(vertical="center")
+        ws[f"T{r}"].font = Font(size=12, name="Arial Narrow", bold=True)
         ws[f"T{r}"].alignment = Alignment(horizontal="center", vertical="center") 
-        ws[f"S{r}"].border = Border(right=Side(style="thick", color="000000"))
+        ws[f"T{r}"].border = Border(left=Side(style="thick", color="000000"), bottom=Side(style="thin", color="000000"), right=Side(style="thin", color="000000"))
+        
     
     for r in range(4, 4+ROSTER_SIZE):
         for c in range(2, len(header)):
@@ -171,12 +231,12 @@ def send_to_file(stats):
     for r in range(4, 4+ROSTER_SIZE):
         for c in range(1, len(header)):       
             cell = ws.cell(row=r, column=c) 
-            cell.border = Border(right=Side(style="thin", color="000000")) 
+            cell.border = Border(right=Side(style="thin", color="000000"), bottom=Side(style="thin", color="000000")) 
             
     ws.merge_cells(f"A{ROSTER_SIZE+4}:T{ROSTER_SIZE+4}")
     ws['A18'].fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
             
-            
+    # Spaces cells width and height correctly 
     for col in ws.columns:
         max_length = 0
         column = get_column_letter(col[0].column)  # Convert 1 -> 'A', etc.
@@ -188,7 +248,10 @@ def send_to_file(stats):
                 pass
         adjusted_width = max_length + 2  # add some padding
         ws.column_dimensions[column].width = adjusted_width
-
+        
+    for row in range(4, 4 + ROSTER_SIZE):
+        ws.row_dimensions[row].height = 22
+    
     wb.save(file_name)
     
     
@@ -414,7 +477,7 @@ options = [
       "function": WIN,
       "index": 17
     }
-    ]
+]
 
 button_list = []
 x = 80
@@ -423,6 +486,8 @@ y = 425
 row = 0
 y_increment = 75
 count = 0
+
+# Creates initial buttons - Statistics
 for option in options:
     pos_x = x + (count * x_increment)
     pos_y = y + (row * y_increment)
@@ -445,6 +510,7 @@ row = 0
 y_increment2 = 160
 count = 0
 
+# Create player buttons
 for option in players:
     if "img" in players:
         img = pygame.image.load(option["img"]).convert_alpha()
@@ -463,6 +529,7 @@ for option in players:
         row += 1
     player_list.append(curr_button)
     
+    # Places image to corresponding player 
     if "img" in option:
         img = pygame.image.load(option["img"]).convert_alpha()
         img = pygame.transform.scale(img, (70,87))
@@ -474,7 +541,10 @@ def save():
     if stats == {}:
         print("No Stats To Save")
     else:
-        send_to_file(stats)
+        if CONTINUE_WB:
+            send_to_file(stats,wb=wb,sheet_name=sheet_name)
+        else:
+            send_to_file(stats,sheet_name="Stat Sheet")
         print("Saved")
 
 def new_game():
