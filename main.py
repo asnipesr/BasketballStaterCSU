@@ -135,7 +135,7 @@ multipliers = [3,2,1,1,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
    
 # Sends stats to file and formats worksheet
 def send_to_file(stats, wb=None, sheet_name=""):
-    header = ["PLAYER","GOLD\n +3", "SILVER\n +2", "BRONZE\n +1", "FTS\n +1", "AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n+ 2", "BLK\n +2", "DEFL\n +1", "CHG/W-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "TEAM WIN\n +1", "TOTAL"]
+    header = ["PLAYER","GOLD\n +3", "SILVER\n +2", "BRONZE\n +1", "FTS\n +1", "AST\n +2", "V-AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n+ 2", "BLK\n +2", "DEFL\n +1", "CHG/W-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "TEAM WIN\n +1", "TOTAL"]
     multipliers = [3,2,1,1,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
     
     # Create workbook if none exists (doesn't want to append)
@@ -158,19 +158,19 @@ def send_to_file(stats, wb=None, sheet_name=""):
     # Generate Top Header
     ws.merge_cells("A1:T1")
     ws['A1'] = "Cleveland State Basketball"
-    ws['A1'].font = Font(name="Arial Narrow", size=22, bold=True, color=("FFFFFF"))
+    ws['A1'].font = Font(name=" Oswald", size=22, bold=True, color=("FFFFFF"))
     ws['A1'].fill = PatternFill(start_color="1B6A42", end_color="1B6A42",fill_type="solid")
     ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
     
     # Generate secondary header
     ws.merge_cells("A2:T2")
     ws['A2'] = f"Viking Way Stats - {today.month}/{today.day}"
-    ws['A2'].font = Font(name="Arial Narrow", size=16, bold=True, italic=True, color="000000")
+    ws['A2'].font = Font(name="Oswald", size=16, bold=True, italic=True, color="000000")
     ws['A2'].fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9",fill_type="solid")
     ws['A2'].alignment = Alignment(horizontal="center", vertical="center")
     
     # Create header with wanted statistics
-    header_font = Font(name="Arial Narrow", bold=True, italic=True, color="FFFFFF")
+    header_font = Font(name="Oswald", bold=True, italic=True, color="FFFFFF")
     header_fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
     header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
     
@@ -196,7 +196,7 @@ def send_to_file(stats, wb=None, sheet_name=""):
     for player in players:
         name = player["name"]
         if name not in stats:
-            zero_stats = [0] * 18
+            zero_stats = [0] * 19
             total = 0  
             row_data = [name] + zero_stats + [total]
             player_rows.append(row_data)
@@ -210,17 +210,17 @@ def send_to_file(stats, wb=None, sheet_name=""):
     
     # Styling for Rows and text
     for r in range(4, 4+ROSTER_SIZE):
-        ws[f"A{r}"].font = Font(name="Arial Narrow", size=12, bold=True)
+        ws[f"A{r}"].font = Font(name="Oswald", size=12, bold=True)
         ws[f"A{r}"].alignment = Alignment(vertical="center")
-        ws[f"T{r}"].font = Font(size=12, name="Arial Narrow", bold=True)
-        ws[f"T{r}"].alignment = Alignment(horizontal="center", vertical="center") 
-        ws[f"T{r}"].border = Border(left=Side(style="thick", color="000000"), bottom=Side(style="thin", color="000000"), right=Side(style="thin", color="000000"))
+        ws[f"U{r}"].font = Font(size=12, name="Oswald", bold=True)
+        ws[f"U{r}"].alignment = Alignment(horizontal="center", vertical="center") 
+        ws[f"U{r}"].border = Border(left=Side(style="thick", color="000000"), bottom=Side(style="thin", color="000000"), right=Side(style="thin", color="000000"))
         
     
     for r in range(4, 4+ROSTER_SIZE):
         for c in range(2, len(header)):
             cell = ws.cell(row=r, column=c)
-            cell.font = Font(name="Arial Narrow", size=10)
+            cell.font = Font(name="Oswald", size=12)
             cell.alignment = Alignment(horizontal="center", vertical="center")
     
     for r in range(5, 4+ROSTER_SIZE, 2):
@@ -235,19 +235,18 @@ def send_to_file(stats, wb=None, sheet_name=""):
             
     ws.merge_cells(f"A{ROSTER_SIZE+4}:T{ROSTER_SIZE+4}")
     ws['A18'].fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
+    ws.row_dimensions[18].height = 26
             
     # Spaces cells width and height correctly 
     for col in ws.columns:
-        max_length = 0
         column = get_column_letter(col[0].column)  # Convert 1 -> 'A', etc.
-        for cell in col:
-            try:
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
-            except:
-                pass
-        adjusted_width = max_length + 2  # add some padding
-        ws.column_dimensions[column].width = adjusted_width
+        if column == 'A':
+            ws.column_dimensions[column].width = 16
+        elif column == 'L':
+            ws.column_dimensions[column].width = 5
+        else:
+            ws.column_dimensions[column].width = 10
+        
         
     for row in range(4, 4 + ROSTER_SIZE):
         ws.row_dimensions[row].height = 22
@@ -272,6 +271,9 @@ def FTs():
 def AST():
     global curr
     curr = "AST"
+def Viking_AST():
+    global curr
+    curr = "Viking_AST"
 def TOV():
     global curr
     curr = "TOV"
@@ -338,13 +340,13 @@ def Number(num):
     if name in stats:
         print(stats_dict["index"])
         stats[name][stats_dict["index"]] += 1
-        if stats_dict["index"] == 7 or stats_dict["index"] == 8:
-            stats[name][9] += 1
+        if stats_dict["index"] == 8 or stats_dict["index"] == 9:
+            stats[name][10] += 1
     else:
         stats[name] = [0]*18
         stats[name][stats_dict["index"]] = 1
-        if stats_dict["index"] == 7 or stats_dict["index"] == 8:
-            stats[name][9] += 1
+        if stats_dict["index"] == 8 or stats_dict["index"] == 9:
+            stats[name][10] += 1
     print(stats)
     save()
 
@@ -428,54 +430,58 @@ options = [
       "function": AST,
       "index": 4
     },
+    { "name" : "Viking_AST",
+      "function": Viking_AST,
+      "index": 5
+    },
     { "name" : "TOV",
       "function": TOV,
-      "index": 5
+      "index": 6
     },
     { "name" : "PT",
       "function": PT,
-      "index": 6
+      "index": 7
     },
     { "name" : "OREB",
       "function": OREB,
-      "index": 7
+      "index": 8
     },
     { "name" : "DREB",
       "function": DREB,
-      "index": 8
+      "index": 9
     },
-    #total rebounds is index 9
+    #total rebounds is index 10
     { "name" : "STL",
       "function": STL,
-      "index": 10
+      "index": 11
     },
     { "name" : "BLK",
       "function": BLK,
-      "index": 11
+      "index": 12
     },
     { "name" : "DEFL",
       "function": DEFL,
-      "index": 12
+      "index": 13
     },
     { "name" : "CHG/W-UP",
       "function": CHG_WUP,
-      "index": 13
+      "index": 14
     },
     { "name" : "DRAW FOUL",
       "function": DRAW_FL,
-      "index": 14
+      "index": 15
     },
     { "name" : "FOUL",
       "function": FOUL,
-      "index": 15
+      "index": 16
     },
     { "name" : "BLOW BY",
       "function": BLOW_BY,
-      "index": 16
+      "index": 17
     },
     { "name" : "TEAM WIN",
       "function": WIN,
-      "index": 17
+      "index": 18
     }
 ]
 
