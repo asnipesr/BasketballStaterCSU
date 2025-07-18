@@ -75,7 +75,7 @@ if Path(file_name).is_file():
 
 # check it out
 print("Saving name", file_name)
-
+print("\n")
 
 #initializing pygame
 pygame.init()
@@ -110,28 +110,6 @@ pygame.display.flip()
 run = True
 selected = False
 global curr
-multipliers = [3,2,1,1,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
-# def send_to_file(stats):    
-#     # need to add in advanced metrics
-#     today = date.today()
-#     if USER_INP is None:
-#         file_name = "./" + str(today.month) + "-" + str(today.day) + "statsheet.csv"
-#     else:
-#         file_name = USER_INP + ".csv"
-
-#     header = ["PLAYER","GOLD\n+3", "SILVER\n+2", "BRONZE\n+1", "FTS\n+1", "AST\n+2", "TO\n-3", "PT\n+1", "OREB\n+2", "DREB\n+1", "REB", "STL\n+2", "BLK\n+2", "DEFL\n+1", "CHG/W-UP\n+3", "DRAW FL\n+1", "FOUL\n-1", "BLOW BY\n-1", "TEAM WIN\n+1", "TOTAL"]
-#     f = open(file_name, 'w')
-#     writer = csv.writer(f)
-#     writer.writerow(header)
-#     for person in stats.keys():
-#         total = 0
-#         csv_string = [person]
-#         for i in stats[person]:
-#             csv_string.append(str(i))
-#         for a,b in zip(stats[person], multipliers):
-#             total += int(a) * b
-#         csv_string.append(str(total))
-#         writer.writerow(csv_string)
    
 # Sends stats to file and formats worksheet
 def send_to_file(stats, wb=None, sheet_name=""):
@@ -245,7 +223,7 @@ def send_to_file(stats, wb=None, sheet_name=""):
         elif column == 'O':
             ws.column_dimensions[column].width = 5
         else:
-            ws.column_dimensions[column].width = 8
+            ws.column_dimensions[column].width = 9
         
     
     for row in range(4, 4 + ROSTER_SIZE):
@@ -342,12 +320,13 @@ def Number(num):
     for i in stats.keys():
         new_stats[i] = stats[i].copy()
     stat_records.append(new_stats)
-    print(stat_records)
+    # print(stat_records)
+    # print("Records")
     player_dict = find(players, num)
     name = player_dict["name"]
     stats_dict = find_option(options, curr)
     if name in stats:
-        print(stats_dict["index"])
+        #print(stats_dict["index"])
         stats[name][stats_dict["index"]] += 1
         if stats_dict["index"] == 11 or stats_dict["index"] == 12:
             stats[name][13] += 1
@@ -356,7 +335,8 @@ def Number(num):
         stats[name][stats_dict["index"]] = 1
         if stats_dict["index"] == 11 or stats_dict["index"] == 12:
             stats[name][13] += 1
-    print(stats)
+
+    print(name + " -- " + stats_dict["name"])
     save()
 
 players = [
