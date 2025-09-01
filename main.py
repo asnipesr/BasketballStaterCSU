@@ -113,8 +113,8 @@ global curr
    
 # Sends stats to file and formats worksheet
 def send_to_file(stats, wb=None, sheet_name=""):
-    header = ["PLAYER","GOLD\n +3", "GOLD MISS\n -1", "SILVER\n +2", "SILVER MISS\n -1","BRONZE\n +1", "BRONZE MISS\n -1", "FTS\n +1", "AST\n +2", "VIKING AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n +2", "BLK\n +2", "DEFL\n +1", "CHG/W-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "TEAM WIN\n +1", "TOTAL"]
-    multipliers = [3,-1,2,-1,1,-1,1,2,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
+    header = ["PLAYER","GOLD\n +3", "GOLD MISS\n -1", "SILVER\n +2", "SILVER MISS\n -2","BRONZE\n +1", "BRONZE MISS\n -3", "FTS\n +1", "AST\n +2", "VIKING AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n +2", "BLK\n +2", "DEFL\n +1", "CHG/W-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "TEAM WIN\n +1", "TOTAL"]
+    multipliers = [3,-1,2,-2,1,-3,1,2,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
     
     # Create workbook if none exists (doesn't want to append)
     if wb is None:
@@ -213,21 +213,29 @@ def send_to_file(stats, wb=None, sheet_name=""):
             
     ws.merge_cells(f"A{ROSTER_SIZE+4}:X{ROSTER_SIZE+4}")
     ws['A18'].fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
-    ws.row_dimensions[18].height = 26
+    ws.row_dimensions[4 + ROSTER_SIZE].height = 26.00
+    ws.row_dimensions[3].height = 38.00
             
     # Spaces cells width and height correctly 
+    OFFSET = 0.83
     for col in ws.columns:
         column = get_column_letter(col[0].column)  # Convert 1 -> 'A', etc.
         if column == 'A':
-            ws.column_dimensions[column].width = 16
+            ws.column_dimensions[column].width = 16.00 + OFFSET
+        elif column == 'E':
+            ws.column_dimensions[column].width = 10.00 + OFFSET
+        elif column == 'G':
+            ws.column_dimensions[column].width = 10.50 + OFFSET
         elif column == 'O':
-            ws.column_dimensions[column].width = 5
+            ws.column_dimensions[column].width = 5.00 + OFFSET
+        elif: column == 'B' or column == 'J':
+            ws.column_dimensions[column].width = 8.50 + OFFSET
         else:
-            ws.column_dimensions[column].width = 9
+            ws.column_dimensions[column].width = 8.00 + OFFSET
         
     
     for row in range(4, 4 + ROSTER_SIZE):
-        ws.row_dimensions[row].height = 22
+        ws.row_dimensions[row].height = 22.00
     
     wb.save(file_name)
     
@@ -366,7 +374,8 @@ players = [
      "img": "./players/5david.webp"},
     {"number": "7",
      "function": Number,
-     "name": "Dayan Nessah"},
+     "name": "Dayan Nessah",
+     "img": "./players/7dayan.png"},
     {"number": "11",
      "function": Number,
      "name": "Waqo Tessema",
@@ -379,6 +388,10 @@ players = [
      "function": Number,
      "name": "Lucas Burton",
      "img": "./players/13lucas.webp"},
+    {"number": "15",
+     "function": Number,
+     "name": "Ivan Spirov",
+     "img": "./players/15ivan.png"},
     {"number": "22",
      "function": Number,
      "name": "Josiah Harris",
