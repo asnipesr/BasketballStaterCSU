@@ -83,7 +83,7 @@ pygame.init()
 #setting screen width and height
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 800
-ROSTER_SIZE = 14
+ROSTER_SIZE = 15
 
 #creating game window
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -113,8 +113,8 @@ global curr
    
 # Sends stats to file and formats worksheet
 def send_to_file(stats, wb=None, sheet_name=""):
-    header = ["PLAYER","GOLD\n +3", "GOLD MISS\n -1", "SILVER\n +2", "SILVER MISS\n -2","BRONZE\n +1", "BRONZE MISS\n -3", "FTS\n +1", "AST\n +2", "VIKING AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n +2", "BLK\n +2", "DEFL\n +1", "CHG/W-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "TEAM WIN\n +1", "TOTAL"]
-    multipliers = [3,-1,2,-2,1,-3,1,2,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
+    header = ["PLAYER","GOLD\n +3", "GOLD MISS\n -1", "SILVER\n +2", "SILVER MISS\n -1","BRONZE\n +1", "BRONZE MISS\n -2", "FTS\n +1", "AST\n +2", "VIKING AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n +2", "BLK\n +2", "DEFL\n +1", "CHG/W-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "TEAM WIN\n +1", "TOTAL"]
+    multipliers = [3,-1,2,-1,1,-2,1,2,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
     
     # Create workbook if none exists (doesn't want to append)
     if wb is None:
@@ -212,7 +212,7 @@ def send_to_file(stats, wb=None, sheet_name=""):
             cell.border = Border(right=Side(style="thin", color="000000"), bottom=Side(style="thin", color="000000")) 
             
     ws.merge_cells(f"A{ROSTER_SIZE+4}:X{ROSTER_SIZE+4}")
-    ws['A18'].fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
+    ws[f"A{ROSTER_SIZE+4}"].fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
     ws.row_dimensions[4 + ROSTER_SIZE].height = 26.00
     ws.row_dimensions[3].height = 38.00
             
@@ -228,7 +228,7 @@ def send_to_file(stats, wb=None, sheet_name=""):
             ws.column_dimensions[column].width = 10.50 + OFFSET
         elif column == 'O':
             ws.column_dimensions[column].width = 5.00 + OFFSET
-        elif: column == 'B' or column == 'J':
+        elif column == 'C' or column == 'J':
             ws.column_dimensions[column].width = 8.50 + OFFSET
         else:
             ws.column_dimensions[column].width = 8.00 + OFFSET
