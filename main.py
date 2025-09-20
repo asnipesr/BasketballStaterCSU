@@ -366,7 +366,7 @@ players = [
      "img": "./players/3tre.webp"},
     {"number": "4",
      "function": Number,
-     "name": "Priest Ryan",
+     "name": "Preist Ryan",
      "img": "./players/4preist.webp"},
     {"number": "5",
      "function": Number,
