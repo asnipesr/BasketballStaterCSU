@@ -143,7 +143,7 @@ def send_to_file(stats, wb=None, sheet_name=""):
     # Generate secondary header
     ws.merge_cells("A2:AA2")
     ws['A2'] = f"Viking Way Stats - {today.month}/{today.day}"
-    ws['A2'].font = Font(name="Oswald", size=16, bold=True, italic=True, color="000000")
+    ws['A2'].font = Font(name="Oswald", size=16, italic=True, color="000000")
     ws['A2'].fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9",fill_type="solid")
     ws['A2'].alignment = Alignment(horizontal="center", vertical="center")
     
@@ -174,9 +174,9 @@ def send_to_file(stats, wb=None, sheet_name=""):
     for player in players:
         name = player["name"]
         if name not in stats:
-            zero_stats = [0] * 22
+            zero_stats = [0] * 25
             total = 0  
-            row_data = [name] + zero_stats + [0,0,0] + [total]
+            row_data = [name] + zero_stats + [total]
             player_rows.append(row_data)
     
     # Sorts the players by first name and paste it to worksheet
