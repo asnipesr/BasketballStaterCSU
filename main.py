@@ -113,8 +113,8 @@ global curr
    
 # Sends stats to file and formats worksheet
 def send_to_file(stats, wb=None, sheet_name=""):
-    header = ["PLAYER","GOLD\n +3", "GOLD MISS\n -1", "SILVER\n +2", "SILVER MISS\n -1","BRONZE\n +1", "BRONZE MISS\n -2", "FTS\n +1", "AST\n +2", "VIKING AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n +2", "BLK\n +2", "DEFL\n +1", "CHG/W-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "WIN\n +1", "GOOD CUT\n+1", "BAD CUT\n-1", "POSS", "TOTAL"]
-    multipliers = [3,-1,2,-1,1,-2,1,2,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1]
+    header = ["PLAYER","GOLD\n +3", "GOLD MISS\n -1", "SILVER\n +2", "SILVER MISS\n -1","BRONZE\n +1", "BRONZE MISS\n -2", "FTS\n +1", "AST\n +2", "VIKING AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n +2", "BLK\n +2", "DEFL\n +1", "CHG\nW-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "WIN\n +1", "GOOD CUT\n+1", "BAD CUT\n-1", "POSS", "TOTAL"]
+    multipliers = [3,-1,2,-1,1,-2,1,2,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1,1,-1]
     
     # Create workbook if none exists (doesn't want to append)
     if wb is None:
@@ -167,7 +167,7 @@ def send_to_file(stats, wb=None, sheet_name=""):
         total = 0
         for a,b in zip(stats[person], multipliers):
             total += int(a) * b
-        row_data = [person] + values + [0,0,0] + [total] 
+        row_data = [person] + values + [0] + [total] 
         player_rows.append(row_data)
         
     # Generates row for player if they are not already on the board
@@ -193,6 +193,7 @@ def send_to_file(stats, wb=None, sheet_name=""):
         ws[f"AA{r}"].font = Font(size=12, name="Oswald", bold=True)
         ws[f"AA{r}"].alignment = Alignment(horizontal="center", vertical="center") 
         ws[f"AA{r}"].border = Border(left=Side(style="thick", color="000000"), bottom=Side(style="thin", color="000000"), right=Side(style="thin", color="000000"))
+
         
     
     for r in range(4, 4+ROSTER_SIZE):
@@ -214,7 +215,7 @@ def send_to_file(stats, wb=None, sheet_name=""):
     ws.merge_cells(f"A{ROSTER_SIZE+4}:AA{ROSTER_SIZE+4}")
     ws[f"A{ROSTER_SIZE+4}"].fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
     ws.row_dimensions[4 + ROSTER_SIZE].height = 26.00
-    ws.row_dimensions[3].height = 38.00
+    ws.row_dimensions[3].height = 57.00
             
     # Spaces cells width and height correctly 
     OFFSET = 0.83
@@ -222,18 +223,6 @@ def send_to_file(stats, wb=None, sheet_name=""):
         column = get_column_letter(col[0].column)  # Convert 1 -> 'A', etc.
         if column == 'A':
             ws.column_dimensions[column].width = 16.00 + OFFSET
-        elif column == 'E':
-            ws.column_dimensions[column].width = 10.00 + OFFSET
-        elif column == 'G':
-            ws.column_dimensions[column].width = 11.00 + OFFSET
-        elif column == 'O':
-            ws.column_dimensions[column].width = 5.00 + OFFSET
-        elif column == 'C' or column == 'S':
-            ws.column_dimensions[column].width = 9.00 + OFFSET
-        elif column == 'X':
-            ws.column_dimensions[column].width = 8.50 + OFFSET
-        elif column == 'J':
-            ws.column_dimensions[column].width = 9.50 + OFFSET
         else:
             ws.column_dimensions[column].width = 7.50 + OFFSET
         
@@ -309,6 +298,12 @@ def BLOW_BY():
 def WIN():
     global curr
     curr = "TEAM WIN"
+def GOOD_CUT():
+    global curr
+    curr = "GOOD CUT"
+def BAD_CUT():
+    global curr
+    curr = "BAD CUT"
 
 
 def find(lst, num):
@@ -343,7 +338,7 @@ def Number(num):
         if stats_dict["index"] == 11 or stats_dict["index"] == 12:
             stats[name][13] += 1
     else:
-        stats[name] = [0]*22
+        stats[name] = [0]*24
         stats[name][stats_dict["index"]] = 1
         if stats_dict["index"] == 11 or stats_dict["index"] == 12:
             stats[name][13] += 1
@@ -500,6 +495,14 @@ options = [
     { "name" : "TEAM WIN",
       "function": WIN,
       "index": 21
+    },
+    { "name" : "GOOD CUT",
+      "function": GOOD_CUT,
+      "index": 22
+    },
+    { "name" : "BAD CUT",
+      "function": BAD_CUT,
+      "index": 23
     }
 ]
 
