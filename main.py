@@ -14,7 +14,7 @@ import pygame
 import pygame.locals 
 from button import button, text
 from datetime import date
-import csv
+import csv, os
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 from openpyxl import Workbook, load_workbook
@@ -22,6 +22,8 @@ from openpyxl.styles import Font, PatternFill, Alignment, Fill, Border, Side
 from pathlib import Path 
 from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import MergedCell
+
+# EXCEL 
 
 ROOT = tk.Tk()
 ROOT.withdraw()
@@ -76,7 +78,7 @@ if Path(file_name).is_file():
 # check it out
 print("Saving name", file_name)
 print("\n")
-
+    
 #initializing pygame
 pygame.init()
 
@@ -110,11 +112,140 @@ pygame.display.flip()
 run = True
 selected = False
 global curr
+
+def generate_player_rows(stats: dict):
+    multipliers = [3,-1,2,-1,1,-2,1,2,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1,1,-1,0]
+    player_rows = []
+    real_data = []
+    for person in stats.keys():
+        values = stats[person] 
+        total = sum(int(a) * b for a, b in zip(values, multipliers))
+        row_data = [person] + values[:25] + [total] 
+        player_rows.append(row_data)
+        real_data.append(([person] + values))
+        
+    # Generates row for player if they are not already on the board
+    for player in players:
+        name = player["name"]
+        if name not in stats:
+            zero_stats = [0] * 30
+            total = 0 
+            row_data = [name] + zero_stats[:25] + [total]
+            player_rows.append(row_data)
+            real_data.append(([name] + zero_stats))
+    player_rows.sort(key=lambda row:row[0])
+    real_data.sort(key=lambda row:row[0])
+    return player_rows, real_data
+
+import tkinter as tk
+from tkinter import ttk
+import pygame
+
+# ---- position & modality helpers ----
+def _center_tk_on_screen(top, width, height):
+    top.update_idletasks()
+    sw = top.winfo_screenwidth()
+    sh = top.winfo_screenheight()
+    x = (sw - width)//2
+    y = (sh - height)//2
+    top.geometry(f"{width}x{height}+{x}+{y}")
+
+
+def _make_modal(top: tk.Toplevel):
+    top.attributes("-topmost", True)  # stay above pygame window
+    top.grab_set()                    # modal: block rest until closed
+    top.focus_force()
+    top.transient()                   # hint "child of parent app"
+
+# ---- reusable choice dialog (2 buttons) ----
+def ask_choice_tk(title: str,
+                  prompt: str,
+                  left_text: str,
+                  right_text: str,
+                  left_value,
+                  right_value,
+                  *,
+                  width=260, height=140,
+                  bg="#0B0B0B",           # almost-black (matches your app)
+                  fg="#FFFFFF",           # white text
+                  accent="#1B6A42"        # CSU green
+                  ):
+    """
+    Returns left_value or right_value, or None if closed/esc.
+    """
+    top = tk.Toplevel()
+    top.withdraw()  # avoid flicker while we style/place
+    top.title(title)
+    top.configure(bg=bg)
+
+    # center over pygame window
+    _center_tk_on_screen(top, width, height)
+
+    # simple theming
+    style = ttk.Style(top)
+    style.theme_use("clam")
+    style.configure("Dark.TLabel", background=bg, foreground=fg, font=("Oswald", 11, "bold"))
+    style.configure("Dark.TButton", font=("Oswald", 10, "bold"), padding=6)
+    style.map("Dark.TButton",
+              background=[("active", accent)],
+              foreground=[("active", "#FFFFFF")])
+
+    # layout
+    frm = ttk.Frame(top, padding=10)
+    frm.pack(expand=True, fill="both")
+    frm.configure(style="Dark.TLabel")  # inherit bg
+
+    lbl = ttk.Label(frm, text=prompt, style="Dark.TLabel")
+    lbl.pack(pady=(4, 10))
+
+    btn_row = ttk.Frame(frm)
+    btn_row.pack()
+
+    result = {"val": None}
+
+    def _choose(v):
+        result["val"] = v
+        top.destroy()
+
+    b1 = ttk.Button(btn_row, text=left_text, style="Dark.TButton", command=lambda: _choose(left_value))
+    b2 = ttk.Button(btn_row, text=right_text, style="Dark.TButton", command=lambda: _choose(right_value))
+    b1.pack(side="left", padx=8)
+    b2.pack(side="left", padx=8)
+
+    # key bindings
+    top.bind("<Escape>", lambda e: top.destroy())
+    top.bind("2",       lambda e: _choose(left_value))
+    top.bind("3",       lambda e: _choose(right_value))
+    top.bind("<Return>",lambda e: _choose(right_value))  # optional default
+
+    # show & make modal
+    top.deiconify()
+    _make_modal(top)
+    top.wait_window()
+    
+    pygame.display.get_wm_info()
+    pygame.event.pump()
+    return result["val"]
+
+def ask_gold_input():
+    return ask_choice_tk(
+        title="Specify Gold Type",
+        prompt="Select Gold Shot Type:",
+        left_text="Gold 2",  right_text="Gold 3",
+        left_value=2,        right_value=3
+    )
+
+def ask_ft_input():
+    return ask_choice_tk(
+        title="Specify FT Type",
+        prompt="Select FT Type:",
+        left_text="FT Miss",  right_text="FT Make",
+        left_value=0,        right_value=1
+    )
    
 # Sends stats to file and formats worksheet
 def send_to_file(stats, wb=None, sheet_name=""):
     header = ["PLAYER","GOLD\n +3", "GOLD MISS\n -1", "SILVER\n +2", "SILVER MISS\n -1","BRONZE\n +1", "BRONZE MISS\n -2", "FTS\n +1", "AST\n +2", "VIKING AST\n +2", "TO\n -3", "PT\n +1", "OREB\n +2", "DREB\n +1", "REB", "STL\n +2", "BLK\n +2", "DEFL\n +1", "CHG\nW-UP\n +3", "DRAW FL\n +1", "FOUL\n -1", "BLOW BY\n -1", "WIN\n +1", "GOOD CUT\n+1", "BAD CUT\n-1", "POSS", "TOTAL"]
-    multipliers = [3,-1,2,-1,1,-2,1,2,2,-3,1,2,1,0,2,2,1,3,1,-1,-1,1,1,-1]
     
     # Create workbook if none exists (doesn't want to append)
     if wb is None:
@@ -133,15 +264,16 @@ def send_to_file(stats, wb=None, sheet_name=""):
     else:
         ws = wb.create_sheet(title=sheet_name)
     
+    merged_column = get_column_letter(len(header))
     # Generate Top Header
-    ws.merge_cells("A1:AA1")
+    ws.merge_cells(f"A1:{merged_column}1")
     ws['A1'] = "Cleveland State Basketball"
     ws['A1'].font = Font(name=" Oswald", size=22, bold=True, color=("FFFFFF"))
     ws['A1'].fill = PatternFill(start_color="1B6A42", end_color="1B6A42",fill_type="solid")
     ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
     
     # Generate secondary header
-    ws.merge_cells("A2:AA2")
+    ws.merge_cells(f"A2:{merged_column}2")
     ws['A2'] = f"Viking Way Stats - {today.month}/{today.day}"
     ws['A2'].font = Font(name="Oswald", size=16, italic=True, color="000000")
     ws['A2'].fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9",fill_type="solid")
@@ -152,35 +284,17 @@ def send_to_file(stats, wb=None, sheet_name=""):
     header_fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
     header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
     
-    ## Re"draws" statistic headers every update
-    start_header_row = 3
+    ## Draws statistic headers
+    header_row = 3
     for col_index, value in enumerate(header, start=1):
-        cell = ws.cell(row=start_header_row, column=col_index, value=value)
+        cell = ws.cell(row=header_row, column=col_index, value=value)
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = header_alignment
         
     # Generates rows of player statistic data
-    player_rows = []
-    for person in stats.keys():
-        values = stats[person] 
-        total = 0
-        for a,b in zip(stats[person], multipliers):
-            total += int(a) * b
-        row_data = [person] + values + [0] + [total] 
-        player_rows.append(row_data)
-        
-    # Generates row for player if they are not already on the board
-    for player in players:
-        name = player["name"]
-        if name not in stats:
-            zero_stats = [0] * 25
-            total = 0  
-            row_data = [name] + zero_stats + [total]
-            player_rows.append(row_data)
+    player_rows, total_rows = generate_player_rows(stats)
     
-    # Sorts the players by first name and paste it to worksheet
-    player_rows.sort(key=lambda row:row[0])
     start_row = 4
     for r_index, row in enumerate(player_rows, start=start_row):
         for c_index, value in enumerate(row, start=1):
@@ -190,29 +304,33 @@ def send_to_file(stats, wb=None, sheet_name=""):
     for r in range(4, 4+ROSTER_SIZE):
         ws[f"A{r}"].font = Font(name="Oswald", size=12)
         ws[f"A{r}"].alignment = Alignment(vertical="center")
-        ws[f"AA{r}"].font = Font(size=12, name="Oswald", bold=True)
-        ws[f"AA{r}"].alignment = Alignment(horizontal="center", vertical="center") 
-        ws[f"AA{r}"].border = Border(left=Side(style="thick", color="000000"), bottom=Side(style="thin", color="000000"), right=Side(style="thin", color="000000"))
-
-        
+        ws[f"{merged_column}{r}"].font = Font(size=12, name="Oswald", bold=True)
+        ws[f"{merged_column}{r}"].alignment = Alignment(horizontal="center", vertical="center") 
+        ws[f"{merged_column}{r}"].border = Border(left=Side(style="thick", color="000000"), bottom=Side(style="thin", color="000000"), right=Side(style="thin", color="000000"))
+        ws.row_dimensions[r].height = 22.00     
     
     for r in range(4, 4+ROSTER_SIZE):
-        for c in range(2, len(header)):
+        for c in range(1, len(header)):
             cell = ws.cell(row=r, column=c)
+            if c == 1:
+                cell.border = Border(right=Side(style="thin", color="000000"), bottom=Side(style="thin", color="000000")) 
+                continue
+           
             cell.font = Font(name="Oswald", size=12)
             cell.alignment = Alignment(horizontal="center", vertical="center")
-    
+            cell.border = Border(right=Side(style="thin", color="000000"), bottom=Side(style="thin", color="000000")) 
+
     for r in range(5, 4+ROSTER_SIZE, 2):
         for c in range(1, len(header)+1):
             cell = ws.cell(row=r, column=c)
             cell.fill = PatternFill(start_color="efefef", end_color="efefef", fill_type="solid")
     
-    for r in range(4, 4+ROSTER_SIZE):
+    """ for r in range(4, 4+ROSTER_SIZE):
         for c in range(1, len(header)):       
             cell = ws.cell(row=r, column=c) 
-            cell.border = Border(right=Side(style="thin", color="000000"), bottom=Side(style="thin", color="000000")) 
+            cell.border = Border(right=Side(style="thin", color="000000"), bottom=Side(style="thin", color="000000"))  """
             
-    ws.merge_cells(f"A{ROSTER_SIZE+4}:AA{ROSTER_SIZE+4}")
+    ws.merge_cells(f"A{ROSTER_SIZE+4}:{merged_column}{ROSTER_SIZE+4}")
     ws[f"A{ROSTER_SIZE+4}"].fill = PatternFill(start_color="000000", end_color="000000", fill_type="solid")
     ws.row_dimensions[4 + ROSTER_SIZE].height = 26.00
     ws.row_dimensions[3].height = 57.00
@@ -223,14 +341,44 @@ def send_to_file(stats, wb=None, sheet_name=""):
         column = get_column_letter(col[0].column)  # Convert 1 -> 'A', etc.
         if column == 'A':
             ws.column_dimensions[column].width = 16.00 + OFFSET
+        elif column == 'O':
+            ws.column_dimensions[column].width = 5.00 + OFFSET
         else:
             ws.column_dimensions[column].width = 7.50 + OFFSET
+            
+    header_hidden = ["Gold 2 Make", "Gold 2 Miss", "Gold 3 Make", "Gold 3 Miss", "FT Misses"]
+    hidden_players = []
+    for person in total_rows:
+        #name = person[0]
+        data = person[26:]
+        hidden_players.append(data)
+    
+    header_row = 3
+    for col_index, value in enumerate(header_hidden, start=31):
+        cell = ws.cell(row=header_row, column=col_index, value=value)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
         
+    for r_index, row in enumerate(hidden_players, start=start_row):
+        for c_index, value in enumerate(row, start=31):
+            ws.cell(row=r_index, column=c_index, value=value) 
+            
+    for r in range(4, 4+ROSTER_SIZE):
+        for c in range(31, 31+len(header_hidden)):
+            cell = ws.cell(row=r, column=c)
+            cell.font = Font(name="Oswald", size=12)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = Border(left=Side(style="thin", color="000000"), right=Side(style="thin", color="000000"), 
+                                 bottom=Side(style="thin", color="000000")) 
+
+    for r in range(5, 4+ROSTER_SIZE, 2):
+        for c in range(31, 31+len(header_hidden)):
+            cell = ws.cell(row=r, column=c)
+            cell.fill = PatternFill(start_color="efefef", end_color="efefef", fill_type="solid")
     
-    for row in range(4, 4 + ROSTER_SIZE):
-        ws.row_dimensions[row].height = 22.00
     
-    wb.save(file_name)
+    wb.save(file_name)   
     
     
 # "WIN" ,"FGM", "FGA", "3PM", "3PA", "AST", "ORB", "DRB","STL","BLK","TOV"]
@@ -304,6 +452,9 @@ def GOOD_CUT():
 def BAD_CUT():
     global curr
     curr = "BAD CUT"
+def POSS():
+    global curr
+    curr = "POSS"
 
 
 def find(lst, num):
@@ -327,24 +478,75 @@ def Number(num):
     for i in stats.keys():
         new_stats[i] = stats[i].copy()
     stat_records.append(new_stats)
-    # print(stat_records)
-    # print("Records")
     player_dict = find(players, num)
     name = player_dict["name"]
     stats_dict = find_option(options, curr)
-    if name in stats:
-        #print(stats_dict["index"])
-        stats[name][stats_dict["index"]] += 1
-        if stats_dict["index"] == 11 or stats_dict["index"] == 12:
-            stats[name][13] += 1
+    
+    gold_id = 0
+    if curr == "GOLD" or curr == "GOLD MISS":
+        gold_id = ask_gold_input()
+        if name not in stats:
+            stats[name] = [0]*30
+            
+        if gold_id == 2 and curr == "GOLD":
+            stats[name][25] += 1
+            print("GOLD 2 MAKE")
+            
+        elif gold_id == 2 and curr == "GOLD MISS":
+            stats[name][26] += 1
+            print("GOLD 2 MISS")
+            
+        elif gold_id == 3 and curr == "GOLD":
+            stats[name][27] += 1
+            print("GOLD 3 MAKE")
+            
+        elif gold_id == 3 and curr == "GOLD MISS":
+            stats[name][28] += 1
+            print("GOLD 3 MISS")
+          
+    if curr == "POSS":
+        poss_val = None
+        try:
+            while poss_val is None:
+                POSS_INP = simpledialog.askinteger(title=f"{stats_dict["name"]}", prompt=f"Enter number of {stats_dict["name"]} for {name}", minvalue=0, maxvalue=200)
+                if POSS_INP is None:
+                    return
+                poss_val = POSS_INP
+        except Exception:
+            messagebox.showerror("Invalid Entry. Please enter a number between 0 and 200")
+        
+        if name not in stats:
+            stats[name] = [0]*30
+        
+        stats[name][24] = poss_val
+        print(name + " -- " + "Possession value: " + str(poss_val))
+    
+    elif curr == "FTs":
+        ft_id = 0
+        ft_id = ask_ft_input()
+        if name not in stats:
+            stats[name] = [0] * 30
+            
+        if ft_id == 0:
+            stats[name][29] += 1
+            print(name + " -- " + "FT MISS")
+        else:
+            stats[name][7] += 1
+            print(name + " -- " + "FT MAKE")
     else:
-        stats[name] = [0]*24
-        stats[name][stats_dict["index"]] = 1
-        if stats_dict["index"] == 11 or stats_dict["index"] == 12:
-            stats[name][13] += 1
-
-    print(name + " -- " + stats_dict["name"])
-    save()
+        if name in stats:
+            stats[name][stats_dict["index"]] += 1
+            if stats_dict["index"] == 11 or stats_dict["index"] == 12:
+                stats[name][13] += 1
+        else:
+            stats[name] = [0]*30
+            stats[name][stats_dict["index"]] = 1
+            if stats_dict["index"] == 11 or stats_dict["index"] == 12:
+                stats[name][13] += 1
+                 
+        print(name + " -- " + stats_dict["name"])
+    
+    pass
 
 players = [
     {"number": "0",
@@ -503,6 +705,10 @@ options = [
     { "name" : "BAD CUT",
       "function": BAD_CUT,
       "index": 23
+    },
+    { "name" : "POSS",
+     "function": POSS,
+     "index": 24
     }
 ]
 
@@ -572,7 +778,7 @@ def save():
             send_to_file(stats,wb=wb,sheet_name=sheet_name)
         else:
             send_to_file(stats,sheet_name="Stat Sheet")
-        print("Saved")
+        print("\nSaved to ", file_name, "\nPath: ", os.getcwd())
 
 def new_game():
     stats = {}
@@ -582,17 +788,18 @@ while run:
     
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            save()
             run = False
         elif event.type == pygame.KEYDOWN:
             if pygame.key.get_mods() & pygame.KMOD_META:
                 if event.key == pygame.K_s:
-                    save()
+                    save()   
                 if event.key == pygame.K_z:
                     print("Undo")
                     if len(stat_records) > 0:
                         stats = stat_records[len(stat_records)-1].copy()
                         stat_records = stat_records[0:-1]
-                        print(stats)
+                        #print(stats)
                 if event.key == pygame.K_1:
                     quit
         elif event.type == pygame.MOUSEBUTTONDOWN:
