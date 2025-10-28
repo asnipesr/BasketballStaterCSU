@@ -518,7 +518,7 @@ def Number(num):
         if name not in stats:
             stats[name] = [0]*30
         
-        stats[name][24] = poss_val
+        stats[name][stats_dict["index"]] = poss_val
         print(name + " -- " + "Possession value: " + str(poss_val))
     
     elif curr == "FTs":
@@ -531,7 +531,7 @@ def Number(num):
             stats[name][29] += 1
             print(name + " -- " + "FT MISS")
         else:
-            stats[name][7] += 1
+            stats[name][stats_dict["index"]] += 1
             print(name + " -- " + "FT MAKE")
     else:
         if name in stats:
